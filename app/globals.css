@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #15161b;
+  --canvas: #FAFAF7;
+  --surface: #ffffff;
+  --ink: #1b1a17;
+  --muted: #74716a;
+  --line: #EAE8E1;
+  --soft: #f4f2ec;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+::selection {
+  background: #15161b;
+  color: white;
+}
+
+textarea,
+input,
+button {
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
