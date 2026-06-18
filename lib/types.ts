@@ -5,6 +5,17 @@ export type FitVerdict =
   | "low_probability"
   | "not_yet";
 
+export type AnalysisSource = "openai" | "mock";
+
+export interface AnalysisSectionSources {
+  fit: AnalysisSource;
+  strategy: AnalysisSource;
+  cv: AnalysisSource;
+  coverLetter: AnalysisSource;
+  outreach: AnalysisSource;
+  roadmap: AnalysisSource;
+}
+  
 export interface AnalyzeRequest {
   cv: string;
   jobDescription: string;
@@ -85,6 +96,7 @@ export interface AnalysisResult {
   coverLetter: CoverLetterDraft;
   outreach: OutreachDraft[];
   roadmap: RoadmapItem[];
+  sectionSources?: AnalysisSectionSources;
 }
 
 export type RequestedAction =

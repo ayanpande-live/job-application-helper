@@ -11,6 +11,7 @@ import { ImprovementPlanModal } from "@/components/ImprovementPlanModal";
 import { createMockAnalysis, mockImprovementPlan } from "@/lib/mock-data";
 import type {
   AnalysisResult,
+  AnalysisSource,
   FitVerdict,
   RequestedAction,
   RoleImprovementPlan,
@@ -44,6 +45,19 @@ const verdictTone: Record<FitVerdict, string> = {
   low_probability: "bg-bad/10 text-bad",
   not_yet: "bg-bad/10 text-bad",
 };
+function SourceBadge({ source }: { source: AnalysisSource }) {
+  const isOpenAI = source === "openai";
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] ${
+        isOpenAI ? "bg-good/10 text-good" : "bg-warn/10 text-warn"
+      }`}
+    >
+      {isOpenAI ? "AI-generated" : "Prototype mock"}
+    </span>
+  );
+}
 
 function SectionTitle({ eyebrow, title }: { eyebrow?: string; title: string }) {
   return (
@@ -103,7 +117,14 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
     () => generatedPlan ?? mockImprovementPlan.plan,
     [generatedPlan]
   );
-
+  const sectionSources = result.sectionSources ?? {
+  fit: "mock",
+  strategy: "mock",
+  cv: "mock",
+  coverLetter: "mock",
+  outreach: "mock",
+  roadmap: "mock",
+};
   return (
     <main className="min-h-screen bg-canvas">
       <header className="mx-auto flex max-w-[1180px] items-center justify-between px-6 py-6 sm:px-8">
@@ -172,7 +193,10 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                 <Card className="p-6">
                   <SectionTitle eyebrow="Why you match" title="Strongest evidence" />
-                  <div className="mt-5 space-y-4">
+                  <div className="mt-3">
+                    <SourceBadge source={sectionSources.fit} />
+                  </div>
+                    <div className="mt-5 space-y-4">
                     {result.fit.strengths.map((item) => (
                       <div key={item.label} className="rounded-[15px] bg-soft p-4">
                         <div className="font-black">{item.label}</div>
@@ -202,6 +226,9 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
             {activeTab === "strategy" ? (
               <Card className="p-6">
                 <SectionTitle eyebrow="Application strategy" title="How to apply intelligently" />
+                <div className="mt-3">
+                  <SourceBadge source={sectionSources.strategy} />
+                </div>
                 <div className="mt-5 rounded-[16px] bg-soft p-5">
                   <div className="text-[15px] font-black">Should you apply?</div>
                   <p className="mt-2 text-[14.5px] font-medium leading-[1.6] text-muted">
@@ -236,6 +263,9 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
             {activeTab === "cv" ? (
               <Card className="p-6">
                 <SectionTitle eyebrow="Updated CV" title="Role-aligned CV draft" />
+                <div className="mt-3">
+                  <SourceBadge source={sectionSources.cv} />
+                </div>
                 <div className="mt-5 space-y-5">
                   <div>
                     <div className="mb-2 text-[15px] font-black">Profile</div>
@@ -288,6 +318,9 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
             {activeTab === "cover" ? (
               <Card className="p-6">
                 <SectionTitle eyebrow="Cover letter" title="Drafted from the fit strategy" />
+                <div className="mt-3">
+                  <SourceBadge source={sectionSources.coverLetter} />
+                </div>
                 <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_.85fr]">
                   <div>
                     <div className="mb-2 text-[15px] font-black">Full version</div>
@@ -314,6 +347,11 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
             ) : null}
 
             {activeTab === "outreach" ? (
+            <div className="space-y-5">
+                <div>
+                  <SourceBadge source={sectionSources.outreach} />
+                </div>
+
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
                 {result.outreach.map((msg) => (
                   <Card key={msg.label} className="p-6">
@@ -327,6 +365,8 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
                   </Card>
                 ))}
               </div>
+            </div>
+
             ) : null}
 
             {activeTab === "roadmap" ? (
@@ -335,6 +375,9 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
                   <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                       <SectionTitle eyebrow="Role readiness" title="Improve your fit plan" />
+                      <div className="mt-3">
+                        <SourceBadge source={sectionSources.roadmap} />
+                      </div>
                       <p className="mt-3 max-w-[700px] text-[14.5px] font-medium leading-[1.6] text-muted">
                         The real paid add-on will tailor this plan around your time,
                         budget and preferred way to build credibility. The mock version

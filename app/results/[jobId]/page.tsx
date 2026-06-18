@@ -1,5 +1,13 @@
 import { ResultsDashboard } from "@/components/ResultsDashboard";
 
-export default function ResultsPage({ params }: { params: { jobId: string } }) {
-  return <ResultsDashboard jobId={params.jobId} />;
+type ResultsPageProps = {
+  params: Promise<{
+    jobId: string;
+  }>;
+};
+
+export default async function ResultsPage({ params }: ResultsPageProps) {
+  const { jobId } = await params;
+
+  return <ResultsDashboard jobId={jobId} />;
 }
