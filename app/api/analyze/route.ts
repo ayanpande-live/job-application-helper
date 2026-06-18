@@ -7,18 +7,47 @@ import type {
   CvDraft,
   FitVerdict,
   AnalysisResult,
+  OutreachDraft,
 } from "@/lib/types";
 import fitAnalysisSchema from "@/schemas/fit-analysis.schema.json";
 import cvDraftSchema from "@/schemas/cv-draft.schema.json";
 import coverLetterSchema from "@/schemas/cover-letter.schema.json";
+import outreachSchema from "@/schemas/outreach.schema.json";
 
-function isValidPayload(data: Partial<AnalyzeRequest>): data is AnalyzeRequest {
+type ValidAnalyzeRequest = AnalyzeRequest & {
+  jobTitle: string;
+  company: string;
+  cv: string;
+  jobDescription: string;
+};
+
+function isValidPayload(
+  data: Partial<AnalyzeRequest>
+): data is ValidAnalyzeRequest {
   return (
+    typeof data.jobTitle === "string" &&
+    data.jobTitle.trim().length > 2 &&
+    typeof data.company === "string" &&
+    data.company.trim().length > 1 &&
     typeof data.cv === "string" &&
     data.cv.trim().length > 40 &&
     typeof data.jobDescription === "string" &&
     data.jobDescription.trim().length > 40
   );
+}
+
+function normalizePayload(body: ValidAnalyzeRequest): ValidAnalyzeRequest {
+  return {
+    ...body,
+    jobTitle: body.jobTitle.trim(),
+    company: body.company.trim(),
+    cv: body.cv.trim(),
+    jobDescription: body.jobDescription.trim(),
+    strengths:
+      typeof body.strengths === "string" ? body.strengths.trim() : "",
+    improvements:
+      typeof body.improvements === "string" ? body.improvements.trim() : "",
+  };
 }
 
 function getVerdictLabel(verdict: FitVerdict): string {
@@ -57,13 +86,13 @@ ${body.strengths || "Not provided."}
 
 ${body.improvements || "Not provided."}
 
-## Optional role metadata
+## Role metadata
 
 Job title:
-${body.jobTitle || "Not provided."}
+${body.jobTitle}
 
-Company:
-${body.company || "Not provided."}
+Company / brand name:
+${body.company}
 
 ## Task
 
@@ -109,6 +138,14 @@ ${body.strengths || "Not provided."}
 ## Candidate improvement areas
 
 ${body.improvements || "Not provided."}
+
+## Role metadata
+
+Job title:
+${body.jobTitle}
+
+Company / brand name:
+${body.company}
 
 ## Fit analysis
 
@@ -163,6 +200,15 @@ Do not invent company values.
 Do not praise the company generically.
 Only use company-context signals that are present in the job description or role description.
 
+Use the provided company / brand name as the primary organization reference: ${body.company}.
+Use the provided job title exactly as given: ${body.jobTitle}.
+
+If the job description explicitly mentions a parent company, subsidiary, brand, product line, or business unit, you may reference that relationship only when it makes the application more accurate.
+
+Do not replace the provided company / brand name with another organization.
+
+Do not introduce any company, brand, parent-company, or subsidiary relationship that is not present in the job description or provided metadata.
+
 ## Candidate CV
 
 ${body.cv}
@@ -179,13 +225,13 @@ ${body.strengths || "Not provided."}
 
 ${body.improvements || "Not provided."}
 
-## Optional role metadata
+## Role metadata
 
 Job title:
-${body.jobTitle || "Not provided."}
+${body.jobTitle}
 
-Company:
-${body.company || "Not provided."}
+Company / brand name:
+${body.company}
 
 ## Fit analysis
 
@@ -237,17 +283,6 @@ The narrative angle should come from the strongest overlap between:
 - candidate evidence
 - company context visible in the job description
 - fit analysis
-
-Examples of possible angles:
-- demand generation and commercial growth
-- consultative customer value
-- international stakeholder collaboration
-- product adoption and platform growth
-- operational efficiency
-- market expansion
-- digital transformation
-- category or domain transition
-- translating adjacent experience into the target role
 
 Do not state the angle as a heading. Use it to shape the letter.
 
@@ -332,6 +367,174 @@ Subject lines:
 - not generic
 
 Create the most credible story this candidate can tell for this role.
+`;
+}
+
+function buildOutreachPrompt(
+  body: AnalyzeRequest,
+  fitAnalysis: OpenAIFitAnalysis,
+  cvDraft: CvDraft,
+  coverLetter: CoverLetterDraft
+): string {
+  return `
+Create candidate outreach messages for this role.
+
+The messages must help the candidate start credible conversations around the role without sounding generic, desperate, or AI-generated.
+
+Use:
+- the candidate CV
+- the job description
+- the fit analysis
+- the tailored CV draft
+- the cover letter
+- any company or role priorities visible in the job description
+
+Do not use internet research.
+Do not invent company knowledge.
+Do not invent candidate experience.
+Do not pretend the candidate has an existing relationship with the recipient.
+
+Use the provided company / brand name as the primary organization reference: ${body.company}.
+Use the provided job title exactly as given: ${body.jobTitle}.
+
+If the job description explicitly mentions a parent company, subsidiary, brand, product line, or business unit, you may reference that relationship only when it makes the message more accurate.
+
+Do not replace the provided company / brand name with another organization.
+
+Do not introduce any company, brand, parent-company, or subsidiary relationship that is not present in the job description or provided metadata.
+
+## Candidate CV
+
+${body.cv}
+
+## Job description
+
+${body.jobDescription}
+
+## Candidate-endorsed strengths
+
+${body.strengths || "Not provided."}
+
+## Candidate improvement areas
+
+${body.improvements || "Not provided."}
+
+## Role metadata
+
+Job title:
+${body.jobTitle}
+
+Company / brand name:
+${body.company}
+
+## Fit analysis
+
+${JSON.stringify(fitAnalysis, null, 2)}
+
+## Tailored CV draft
+
+${JSON.stringify(cvDraft, null, 2)}
+
+## Cover letter
+
+${JSON.stringify(coverLetter, null, 2)}
+
+## Task
+
+Return exactly four outreach messages:
+
+1. Recruiter introduction
+2. Hiring manager note
+3. Employee / referral message
+4. Post-application follow-up
+
+Each message must include:
+- a clear reason for reaching out
+- one specific candidate evidence point
+- a small, low-friction ask
+
+## Message strategy
+
+The messages should not be mini cover letters.
+
+They should sound like something a real candidate could send on LinkedIn or email.
+
+Use this structure loosely:
+specific reason + relevant evidence + small ask
+
+Do not make every message follow the exact same sentence pattern.
+
+## Fit-aware outreach rules
+
+If the candidate is strong_fit or good_fit:
+- The messages can be confident.
+- Emphasize direct evidence that matches the role.
+- Ask for a practical next step or quick pointer.
+
+If the candidate is stretch_fit:
+- The messages should be careful and credible.
+- Emphasize adjacent evidence.
+- Do not pretend the candidate has all required experience.
+- Ask for perspective on the role or team priorities.
+
+If the candidate is low_probability or not_yet:
+- Do not push the candidate as a strong fit.
+- Frame outreach as a learning or clarification conversation.
+- Ask what experience would make someone credible for this type of role.
+
+## Recipient-specific guidance
+
+Recruiter introduction:
+- Short, clear, and role-specific.
+- Ask whether the background is aligned with what the team is screening for.
+
+Hiring manager note:
+- More focused on the role's actual business priorities.
+- Mention one relevant evidence point.
+- Ask for a brief perspective or whether this background could be relevant.
+
+Employee / referral message:
+- Do not ask directly for a referral immediately.
+- Ask for perspective on the team, role, or hiring priorities.
+- Keep it warm and respectful.
+
+Post-application follow-up:
+- Mention that the candidate applied.
+- Briefly summarize why the role is relevant.
+- Do not pressure the recipient.
+- Ask for any guidance on the process or team priorities.
+
+## Anti-generic rules
+
+Do not use:
+- I hope this message finds you well
+- I am excited to connect
+- I am passionate about
+- I would be a perfect fit
+- your esteemed company
+- I came across your profile and was impressed
+- I would love to pick your brain
+- quick chat to discuss synergies
+- proven track record
+- dynamic professional
+
+Do not flatter the recipient.
+
+Do not make vague claims.
+
+Do not use fake enthusiasm.
+
+Do not overclaim the candidate's fit.
+
+## Length rules
+
+Each message should be:
+- 50 to 110 words
+- concise
+- easy to send
+- specific enough to feel human
+
+Create messages that feel useful, credible, and low-friction.
 `;
 }
 
@@ -693,6 +896,120 @@ Do not include explanations outside the JSON.
 Do not add fields that are not in the schema.
 `;
 
+const OUTREACH_SYSTEM_PROMPT = `
+You are the FitSignal outreach message engine.
+
+Your job is to create short, credible candidate outreach messages for a specific role.
+
+You are not writing generic networking spam.
+You are helping the candidate start useful human conversations.
+
+The outreach should answer:
+"What is the smallest credible conversation this candidate can start around this role?"
+
+## Core principles
+
+1. Do not use a fixed template.
+2. Do not write generic LinkedIn spam.
+3. Do not invent company knowledge.
+4. Do not invent candidate experience.
+5. Do not pretend the candidate has an existing relationship with the recipient.
+6. Do not overstate the candidate's fit.
+7. Use the fit verdict and fit score to calibrate confidence.
+8. Use role and company context only when visible in the job description.
+9. Make every message specific to the candidate and role.
+10. Each message must have a small, reasonable ask.
+
+## Message quality rules
+
+Good outreach is:
+- short
+- specific
+- low-friction
+- evidence-based
+- respectful of the recipient's time
+- clear about why the candidate is reaching out
+
+Bad outreach is:
+- long
+- flattering
+- vague
+- desperate
+- overconfident
+- full of generic enthusiasm
+- basically a cover letter pasted into LinkedIn
+
+## Fit-aware writing rules
+
+If the candidate is strong_fit or good_fit:
+- Write with quiet confidence.
+- Mention direct evidence that matches the role.
+- Ask for a practical pointer or next step.
+
+If the candidate is stretch_fit:
+- Write carefully.
+- Emphasize adjacent evidence.
+- Do not pretend the candidate has the full target-role background.
+- Ask for perspective on the role, hiring priorities, or fit.
+
+If the candidate is low_probability or not_yet:
+- Write conservatively.
+- Do not pitch the candidate as a strong fit.
+- Frame the message as learning or role-understanding.
+- Ask what kind of experience would make someone credible for this type of role.
+
+## Recipient rules
+
+Recruiter introduction:
+- Ask whether the candidate's background aligns with what the team is screening for.
+- Keep it concise and easy to respond to.
+
+Hiring manager note:
+- Focus on the business priority behind the role.
+- Mention one candidate evidence point.
+- Ask for a brief perspective, not a full meeting.
+
+Employee / referral message:
+- Do not ask for a referral immediately.
+- Ask for perspective on the role, team, or hiring priorities.
+- Keep it warm but not overly familiar.
+
+Post-application follow-up:
+- Mention that the candidate applied.
+- Give one concise reason the role is relevant.
+- Ask for any guidance on the process or team priorities.
+- Do not pressure the recipient.
+
+## Anti-generic rules
+
+Do not use:
+- I hope this message finds you well
+- I am excited to connect
+- I am passionate about
+- I would be a perfect fit
+- your esteemed company
+- I came across your profile and was impressed
+- I would love to pick your brain
+- quick chat to discuss synergies
+- proven track record
+- dynamic professional
+
+Do not flatter the recipient.
+Do not fake enthusiasm.
+Do not use empty praise.
+Do not write anything that could apply equally to any job.
+
+## Output requirements
+
+Return only valid JSON matching the provided schema.
+
+Do not include markdown.
+
+Do not include explanations outside the JSON.
+
+Do not add fields that are not in the schema.
+`;
+
 type OpenAIFitAnalysis = {
   fit_verdict: FitVerdict;
   fit_score: number;
@@ -726,6 +1043,10 @@ type OpenAIFitAnalysis = {
     screening_risks: string[];
   };
   next_best_actions: string[];
+};
+
+type OpenAIOutreachResponse = {
+  messages: OutreachDraft[];
 };
 
 function applyOpenAIFitToMockResult(
@@ -884,23 +1205,81 @@ async function generateOpenAICoverLetter(
   return JSON.parse(outputText) as CoverLetterDraft;
 }
 
+async function generateOpenAIOutreach(
+  body: AnalyzeRequest,
+  fitAnalysis: OpenAIFitAnalysis,
+  cvDraft: CvDraft,
+  coverLetter: CoverLetterDraft
+): Promise<OutreachDraft[]> {
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const response = await client.responses.create({
+    model: process.env.OPENAI_MODEL || "gpt-5.5",
+    store: false,
+    input: [
+      {
+        role: "system",
+        content: OUTREACH_SYSTEM_PROMPT,
+      },
+      {
+        role: "user",
+        content: buildOutreachPrompt(
+          body,
+          fitAnalysis,
+          cvDraft,
+          coverLetter
+        ),
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: outreachSchema.name,
+        strict: outreachSchema.strict,
+        schema: outreachSchema.schema,
+      },
+    },
+  });
+
+  const outputText = response.output_text;
+
+  if (!outputText) {
+    throw new Error("OpenAI returned no outreach output text.");
+  }
+
+  const parsed = JSON.parse(outputText) as OpenAIOutreachResponse;
+
+  return parsed.messages;
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Partial<AnalyzeRequest>;
 
     if (!isValidPayload(body)) {
       return NextResponse.json(
-        { error: "Please provide enough CV text and job description text." },
+        {
+          error:
+            "Please provide the target job title, company / brand name, enough CV text, and enough job description text.",
+        },
         { status: 400 }
       );
     }
+
+    const normalizedBody = normalizePayload(body);
 
     const jobId =
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `job-${Date.now()}`;
 
-    const mockResult = createMockAnalysis(jobId, body);
+    const mockResult: AnalysisResult = {
+      ...createMockAnalysis(jobId, normalizedBody),
+      jobTitle: normalizedBody.jobTitle,
+      company: normalizedBody.company,
+    };
 
     const mockOnlyResult: AnalysisResult = {
       ...mockResult,
@@ -920,31 +1299,43 @@ export async function POST(request: Request) {
     }
 
     console.log("Calling OpenAI fit analysis...");
-    const openAiFit = await generateOpenAIFitAnalysis(body);
+    const openAiFit = await generateOpenAIFitAnalysis(normalizedBody);
     console.log("OpenAI fit analysis received.");
 
     console.log("Calling OpenAI CV draft...");
-    const openAiCv = await generateOpenAICvDraft(body, openAiFit);
+    const openAiCv = await generateOpenAICvDraft(normalizedBody, openAiFit);
     console.log("OpenAI CV draft received.");
 
     console.log("Calling OpenAI cover letter...");
     const openAiCoverLetter = await generateOpenAICoverLetter(
-      body,
+      normalizedBody,
       openAiFit,
       openAiCv
     );
     console.log("OpenAI cover letter received.");
 
+    console.log("Calling OpenAI outreach messages...");
+    const openAiOutreach = await generateOpenAIOutreach(
+      normalizedBody,
+      openAiFit,
+      openAiCv,
+      openAiCoverLetter
+    );
+    console.log("OpenAI outreach messages received.");
+
     const result: AnalysisResult = {
       ...applyOpenAIFitToMockResult(mockResult, openAiFit),
+      jobTitle: normalizedBody.jobTitle,
+      company: normalizedBody.company,
       cv: openAiCv,
       coverLetter: openAiCoverLetter,
+      outreach: openAiOutreach,
       sectionSources: {
         fit: "openai",
         strategy: "openai",
         cv: "openai",
         coverLetter: "openai",
-        outreach: "mock",
+        outreach: "openai",
         roadmap: "mock",
       },
     };

@@ -55,7 +55,10 @@ export function InputForm({
   error,
 }: InputFormProps) {
   const canSubmit =
-    values.cv.trim().length > 40 && values.jobDescription.trim().length > 40;
+  (values.jobTitle ?? "").trim().length > 2 &&
+  (values.company ?? "").trim().length > 1 &&
+  values.cv.trim().length > 40 &&
+  values.jobDescription.trim().length > 40;
 
   return (
     <main className="min-h-screen bg-canvas">
@@ -85,7 +88,7 @@ export function InputForm({
         <div className="mt-9 grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_300px]">
           <div className="flex flex-col gap-[22px]">
             <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2">
-              <Field label="Target job title">
+              <Field label="Target job title" required>
                 <input
                   value={values.jobTitle ?? ""}
                   onChange={(e) => onChange({ jobTitle: e.target.value })}
@@ -93,13 +96,17 @@ export function InputForm({
                   className={inputClass}
                 />
               </Field>
-              <Field label="Company name">
+              <Field label="Company / brand name" required>
                 <input
                   value={values.company ?? ""}
                   onChange={(e) => onChange({ company: e.target.value })}
-                  placeholder="e.g. Company name"
+                  placeholder="e.g. Brand / parent company, business unit, or target employer"
                   className={inputClass}
                 />
+                <p className="mt-2 text-[12.5px] font-medium leading-[1.45] text-muted">
+                  If the role mentions both a brand and parent company, enter both using the
+                  wording from the job post.
+                </p>
               </Field>
             </div>
 
@@ -168,7 +175,7 @@ export function InputForm({
                 Analyze my fit →
               </Button>
               <span className="text-[13px] font-medium text-muted">
-                Fields must include enough text to create a useful analysis.
+                Job title, company / brand name, CV, and job description are required for accurate results.
               </span>
             </div>
           </div>

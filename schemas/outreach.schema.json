@@ -1,0 +1,34 @@
+{
+  "name": "outreach_messages",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "messages": {
+        "type": "array",
+        "description": "Role-specific candidate outreach messages for different recipient types.",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "label": {
+              "type": "string",
+              "description": "The type of outreach message, such as Recruiter introduction or Hiring manager note."
+            },
+            "to": {
+              "type": "string",
+              "description": "The intended recipient type."
+            },
+            "body": {
+              "type": "string",
+              "description": "The outreach message body."
+            }
+          },
+          "required": ["label", "to", "body"]
+        }
+      }
+    },
+    "required": ["messages"]
+  }
+}
