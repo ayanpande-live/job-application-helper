@@ -1,0 +1,26 @@
+{
+  "name": "cover_letter",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "full": {
+        "type": "string",
+        "description": "A complete role-specific cover letter of approximately 250 to 400 words."
+      },
+      "short": {
+        "type": "string",
+        "description": "A shorter cover letter version of approximately 90 to 140 words."
+      },
+      "subjectLines": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Three to five role-specific email subject line options."
+      }
+    },
+    "required": ["full", "short", "subjectLines"]
+  }
+}

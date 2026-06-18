@@ -3,12 +3,14 @@ import { NextResponse } from "next/server";
 import { createMockAnalysis } from "@/lib/mock-data";
 import type {
   AnalyzeRequest,
+  CoverLetterDraft,
   CvDraft,
   FitVerdict,
   AnalysisResult,
 } from "@/lib/types";
 import fitAnalysisSchema from "@/schemas/fit-analysis.schema.json";
 import cvDraftSchema from "@/schemas/cv-draft.schema.json";
+import coverLetterSchema from "@/schemas/cover-letter.schema.json";
 
 function isValidPayload(data: Partial<AnalyzeRequest>): data is AnalyzeRequest {
   return (
@@ -138,6 +140,198 @@ Do not exaggerate ownership, seniority, technical ability, domain expertise, or 
 Do not make a weak fit look like a strong fit.
 
 Create the strongest honest version of the candidate for this specific job.
+`;
+}
+
+function buildCoverLetterPrompt(
+  body: AnalyzeRequest,
+  fitAnalysis: OpenAIFitAnalysis,
+  cvDraft: CvDraft
+): string {
+  return `
+Create a role-specific cover letter for the candidate.
+
+The letter must use:
+- the candidate CV
+- the job description
+- the fit analysis
+- the tailored CV draft
+- any company values, mission themes, culture signals, or business priorities visible in the job description
+
+Do not use internet research.
+Do not invent company values.
+Do not praise the company generically.
+Only use company-context signals that are present in the job description or role description.
+
+## Candidate CV
+
+${body.cv}
+
+## Job description
+
+${body.jobDescription}
+
+## Candidate-endorsed strengths
+
+${body.strengths || "Not provided."}
+
+## Candidate improvement areas
+
+${body.improvements || "Not provided."}
+
+## Optional role metadata
+
+Job title:
+${body.jobTitle || "Not provided."}
+
+Company:
+${body.company || "Not provided."}
+
+## Fit analysis
+
+${JSON.stringify(fitAnalysis, null, 2)}
+
+## Tailored CV draft
+
+${JSON.stringify(cvDraft, null, 2)}
+
+## Task
+
+Return:
+1. A full cover letter
+2. A shorter cover letter version
+3. Three to five subject line options
+
+## Company-alignment task
+
+Before writing, infer from the job description whether the company emphasizes any of the following:
+- customer focus
+- innovation
+- ownership
+- sustainability
+- operational excellence
+- collaboration
+- inclusion
+- growth
+- trust
+- quality
+- speed
+- data-driven decision-making
+- international mindset
+- mission-driven work
+
+Use only values or priorities that are actually visible or strongly implied in the job description.
+
+Connect at most one or two company priorities to concrete candidate evidence.
+
+If the job description does not reveal meaningful company values or culture signals, focus on role priorities instead.
+
+## Uniqueness task
+
+Do not use a fixed cover letter template.
+
+Choose a distinct narrative angle for this specific candidate and this specific role.
+
+The narrative angle should come from the strongest overlap between:
+- employer priorities
+- candidate evidence
+- company context visible in the job description
+- fit analysis
+
+Examples of possible angles:
+- demand generation and commercial growth
+- consultative customer value
+- international stakeholder collaboration
+- product adoption and platform growth
+- operational efficiency
+- market expansion
+- digital transformation
+- category or domain transition
+- translating adjacent experience into the target role
+
+Do not state the angle as a heading. Use it to shape the letter.
+
+## Fit-aware writing rules
+
+If the candidate is strong_fit or good_fit:
+- Write confidently.
+- Lead with direct evidence.
+- Connect the candidate clearly to the employer's role priorities.
+
+If the candidate is stretch_fit:
+- Write carefully.
+- Emphasize transferable and adjacent evidence.
+- Do not pretend the candidate has every required experience.
+- Acknowledge the transition indirectly through positioning, not apology.
+
+If the candidate is low_probability or not_yet:
+- Write conservatively.
+- Do not make the candidate sound like a strong match.
+- Focus only on real adjacent strengths.
+- Do not hide hard blockers.
+
+## Evidence rules
+
+Use 2 to 3 concrete evidence points from the candidate CV or tailored CV.
+
+Do not invent:
+- achievements
+- tools
+- employers
+- job titles
+- metrics
+- certifications
+- languages
+- industry experience
+- management scope
+- sales quota ownership
+- technical expertise
+- direct product experience
+- company knowledge
+
+Do not overclaim fit.
+
+Do not repeat the CV bullet-by-bullet.
+
+Do not include unsupported job-description keywords.
+
+## Anti-generic rules
+
+Avoid these phrases:
+- I am excited to apply
+- I am passionate about
+- I believe I would be a great fit
+- proven track record
+- dynamic professional
+- fast-paced environment
+- I am confident that my skills and experience
+- I was thrilled to see
+- your esteemed company
+
+The opening sentence must be specific to this role, this company, or this job description.
+
+Every paragraph should contain information that would not apply equally to a different job.
+
+## Length and style
+
+Full letter:
+- 250 to 400 words
+- clear, professional, specific
+- no bullet points
+- no headings
+- no fake enthusiasm
+
+Short version:
+- 90 to 140 words
+- suitable for email or LinkedIn-style application note
+
+Subject lines:
+- 3 to 5 options
+- specific to the role
+- not clickbait
+- not generic
+
+Create the most credible story this candidate can tell for this role.
 `;
 }
 
@@ -385,6 +579,120 @@ Do not add fields that are not in the schema.
 The CV should be stronger, clearer, and more relevant, but it must remain grounded in the supplied evidence.
 `;
 
+const COVER_LETTER_SYSTEM_PROMPT = `
+You are the FitSignal cover letter engine.
+
+Your job is to create a specific, credible, role-aligned cover letter for a candidate.
+
+You are not a generic application letter writer.
+
+The cover letter should answer:
+"What is the most credible story this candidate can tell for this specific role and company?"
+
+## Core principles
+
+1. Do not use a fixed template.
+2. Do not create generic application letters.
+3. Do not invent company knowledge.
+4. Do not invent candidate experience.
+5. Do not overstate the candidate's fit.
+6. Do not hide major gaps with vague enthusiasm.
+7. Use the fit verdict and fit score to calibrate confidence.
+8. Use company values or culture signals only when they are visible in the job description.
+9. Connect company priorities to concrete candidate evidence when possible.
+10. Every paragraph must feel specific to this candidate and this role.
+
+## Company alignment rules
+
+Use only company context available in the job description or role description.
+
+You may extract:
+- values
+- mission themes
+- culture signals
+- business priorities
+- customer promises
+- ways of working
+- product or market priorities
+
+Do not search the internet.
+Do not invent company values.
+Do not say "I admire your values" unless the values are known from the provided text.
+Do not use empty praise.
+
+Good company alignment connects a visible company priority to candidate evidence.
+
+Bad company alignment sounds like:
+- "I admire your innovative culture"
+- "Your values resonate with me"
+- "I am inspired by your mission"
+unless those claims are grounded in the job description and connected to real candidate evidence.
+
+## Uniqueness rules
+
+Before writing, choose a distinct narrative angle for this candidate and role.
+
+Do not state the angle as a heading.
+
+The angle should shape the opening, evidence choices, and closing.
+
+The opening sentence must be specific to this job, company, or role priority.
+
+Do not begin with:
+- I am excited to apply
+- I am writing to express my interest
+- I was thrilled to see
+- I believe I would be a great fit
+
+Avoid generic phrases:
+- passionate about
+- proven track record
+- dynamic professional
+- fast-paced environment
+- highly motivated
+- your esteemed company
+- I am confident that my skills and experience
+
+## Fit-aware writing rules
+
+If the candidate is strong_fit or good_fit:
+- Write confidently.
+- Lead with direct evidence.
+- Make the fit clear and practical.
+
+If the candidate is stretch_fit:
+- Write carefully.
+- Emphasize transferable and adjacent evidence.
+- Do not pretend the candidate has the full target-role background.
+- Position the transition credibly.
+
+If the candidate is low_probability or not_yet:
+- Write conservatively.
+- Do not force the match.
+- Do not make the candidate sound like a strong fit.
+- Use only real adjacent strengths.
+
+## Evidence rules
+
+Use 2 to 3 concrete evidence points from the CV, fit analysis, or tailored CV.
+
+Do not repeat the CV line by line.
+
+Do not add unsupported tools, certifications, metrics, responsibilities, industries, seniority, or company knowledge.
+
+Do not use unsupported job-description keywords.
+
+## Output requirements
+
+Return only valid JSON matching the provided schema.
+
+Do not include markdown.
+
+Do not include explanations outside the JSON.
+
+Do not add fields that are not in the schema.
+`;
+
 type OpenAIFitAnalysis = {
   fit_verdict: FitVerdict;
   fit_score: number;
@@ -535,6 +843,47 @@ async function generateOpenAICvDraft(
   return JSON.parse(outputText) as CvDraft;
 }
 
+async function generateOpenAICoverLetter(
+  body: AnalyzeRequest,
+  fitAnalysis: OpenAIFitAnalysis,
+  cvDraft: CvDraft
+): Promise<CoverLetterDraft> {
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const response = await client.responses.create({
+    model: process.env.OPENAI_MODEL || "gpt-5.5",
+    store: false,
+    input: [
+      {
+        role: "system",
+        content: COVER_LETTER_SYSTEM_PROMPT,
+      },
+      {
+        role: "user",
+        content: buildCoverLetterPrompt(body, fitAnalysis, cvDraft),
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: coverLetterSchema.name,
+        strict: coverLetterSchema.strict,
+        schema: coverLetterSchema.schema,
+      },
+    },
+  });
+
+  const outputText = response.output_text;
+
+  if (!outputText) {
+    throw new Error("OpenAI returned no cover letter output text.");
+  }
+
+  return JSON.parse(outputText) as CoverLetterDraft;
+}
+
 export async function POST(request: Request) {
   try {
     const body = (await request.json()) as Partial<AnalyzeRequest>;
@@ -578,14 +927,23 @@ export async function POST(request: Request) {
     const openAiCv = await generateOpenAICvDraft(body, openAiFit);
     console.log("OpenAI CV draft received.");
 
+    console.log("Calling OpenAI cover letter...");
+    const openAiCoverLetter = await generateOpenAICoverLetter(
+      body,
+      openAiFit,
+      openAiCv
+    );
+    console.log("OpenAI cover letter received.");
+
     const result: AnalysisResult = {
       ...applyOpenAIFitToMockResult(mockResult, openAiFit),
       cv: openAiCv,
+      coverLetter: openAiCoverLetter,
       sectionSources: {
         fit: "openai",
         strategy: "openai",
         cv: "openai",
-        coverLetter: "mock",
+        coverLetter: "openai",
         outreach: "mock",
         roadmap: "mock",
       },
