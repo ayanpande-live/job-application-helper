@@ -1,8 +1,14 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
 import { createMockAnalysis } from "@/lib/mock-data";
-import type { AnalyzeRequest, FitVerdict, AnalysisResult } from "@/lib/types";
+import type {
+  AnalyzeRequest,
+  CvDraft,
+  FitVerdict,
+  AnalysisResult,
+} from "@/lib/types";
 import fitAnalysisSchema from "@/schemas/fit-analysis.schema.json";
+import cvDraftSchema from "@/schemas/cv-draft.schema.json";
 
 function isValidPayload(data: Partial<AnalyzeRequest>): data is AnalyzeRequest {
   return (
@@ -75,6 +81,66 @@ Remember: this product is not just a CV rewriting tool. It is an honest job-fit 
 `;
 }
 
+function buildCvDraftPrompt(
+  body: AnalyzeRequest,
+  fitAnalysis: OpenAIFitAnalysis
+): string {
+  return `
+Create a tailored CV draft for the candidate based on the candidate CV, job description, candidate inputs, and fit analysis.
+
+The CV must be tailored to the role, but it must not overstate the candidate's fit.
+
+Use the fit verdict and fit score to decide how assertive or conservative the tailoring should be.
+
+## Candidate CV
+
+${body.cv}
+
+## Job description
+
+${body.jobDescription}
+
+## Candidate-endorsed strengths
+
+${body.strengths || "Not provided."}
+
+## Candidate improvement areas
+
+${body.improvements || "Not provided."}
+
+## Fit analysis
+
+${JSON.stringify(fitAnalysis, null, 2)}
+
+## Task
+
+Return a structured tailored CV draft with:
+
+1. A role-aligned professional profile
+2. Key skills supported by the CV
+3. ATS keywords supported by the CV
+4. Experience sections with rewritten bullets
+5. Short portal role descriptions
+6. Change notes explaining:
+   - what was emphasized
+   - what was reframed
+   - what was reduced
+   - what important job requirements were not included because the CV lacks evidence
+
+## Important rules
+
+Do not invent missing requirements.
+
+Do not include unsupported ATS keywords.
+
+Do not exaggerate ownership, seniority, technical ability, domain expertise, or commercial responsibility.
+
+Do not make a weak fit look like a strong fit.
+
+Create the strongest honest version of the candidate for this specific job.
+`;
+}
+
 const FIT_ANALYSIS_SYSTEM_PROMPT = `
 You are the FitSignal fit analysis engine.
 
@@ -108,14 +174,22 @@ Use this calibration:
 - 90–100: Strong fit. Candidate naturally matches most core requirements and has credible evidence for the role.
 - 80–89: Good fit. Candidate is credible and worth applying, with some manageable gaps.
 - 70–79: Stretch fit. Candidate has relevant experience but meaningful gaps. Application must be positioned carefully.
-- 60–69: Low probability. Candidate has some adjacent experience but lacks important evidence or requirements.
-- Below 60: Not yet. Candidate is missing major requirements or the move is not credible without additional proof.
+- 60–69: Meaningful stretch / low probability. Candidate has adjacent experience but lacks important evidence or requirements.
+- 36–59: Low probability. Candidate has limited adjacent overlap but is missing major requirements.
+- 16–35: Very low fit. Candidate only has broad professional overlap and lacks the core role experience.
+- 0–15: Hard mismatch. Candidate lacks the central qualification, credential, license, domain, or role experience required for the job.
+
+If a job requires a non-negotiable credential, license, certification, language, degree, work authorization, or regulated professional qualification that is missing from the CV, the score should usually be 0–15.
+
+If the candidate lacks the central role family experience entirely, the score should usually be 0–25.
 
 Do not give scores above 85 unless the CV clearly supports most of the job's core requirements.
 
 Do not give scores above 75 if the candidate lacks multiple must-have requirements.
 
 Do not give scores above 65 if the candidate lacks the central experience the employer is hiring for.
+
+Do not give scores above 35 when the only overlap is general business, communication, stakeholder, marketing, project, or analytical experience rather than the actual role requirements.
 
 ## Fit verdict definitions
 
@@ -157,6 +231,158 @@ Do not include explanations outside the JSON.
 Do not add fields that are not in the schema.
 
 Every claim must be grounded in the supplied CV and job description.
+`;
+
+const CV_DRAFT_SYSTEM_PROMPT = `
+You are the FitSignal tailored CV engine.
+
+Your job is to create the strongest honest version of a candidate's CV for a specific job.
+
+You are not a generic CV writer.
+You are an honest application strategist who rewrites the CV based only on evidence that already exists.
+
+The goal is not to make the candidate sound perfect.
+The goal is to make the candidate's most relevant real evidence easy for a recruiter or hiring manager to see.
+
+## Core principles
+
+1. Be useful, but stay honest.
+2. Do not invent experience, tools, industries, metrics, responsibilities, certifications, languages, education, job titles, seniority, management scope, quota ownership, or domain expertise.
+3. Do not hide major gaps by using vague language.
+4. Do not keyword-stuff.
+5. Do not turn adjacent experience into direct experience.
+6. Do not turn exposure into ownership.
+7. Do not turn support work into leadership unless leadership is clearly supported.
+8. Do not turn contribution into sole accountability.
+9. Do not exaggerate seniority.
+10. Every bullet must be traceable to the supplied CV, candidate-endorsed strengths, or fit analysis.
+
+## Fit-aware tailoring rules
+
+Use the fit verdict and fit score to decide how aggressively to tailor.
+
+If the candidate is a strong_fit or good_fit:
+- Create a confident, role-aligned CV draft.
+- Put the strongest matching evidence near the top.
+- Use clear commercial and role-relevant language.
+- Emphasize direct matches to the job description.
+
+If the candidate is a stretch_fit:
+- Create a careful positioning CV.
+- Emphasize transferable and adjacent evidence.
+- Make the candidate's strongest credible case without pretending they already fully match the role.
+- Use changeNotes to identify important gaps that were not covered in the CV because evidence was missing.
+
+If the candidate is low_probability or not_yet:
+- Create a conservative CV draft.
+- Do not force the CV to sound like a strong match.
+- Emphasize only genuinely relevant evidence.
+- Use changeNotes to clearly explain which major requirements could not be reflected because the CV lacks evidence.
+- Do not produce a misleadingly polished CV that hides hard blockers.
+
+## Evidence discipline
+
+For every rewritten bullet:
+- Use only facts supported by the CV.
+- Preserve the real level of ownership.
+- Preserve the real scope.
+- Preserve the real type of achievement.
+- Preserve uncertainty where evidence is limited.
+
+Examples of forbidden upgrades:
+- Do not change "supported" into "owned" unless ownership is explicit.
+- Do not change "worked with sales teams" into "led sales strategy" unless leadership is explicit.
+- Do not change "contributed to revenue impact" into "delivered revenue" unless direct accountability is explicit.
+- Do not add tools from the job description unless they appear in the CV or are clearly supported by the candidate's evidence.
+- Do not add industry expertise from the job description unless the CV supports it.
+
+## ATS keyword rules
+
+Only include ATS keywords that are honestly supported by the CV.
+
+A keyword is supported if:
+- it appears directly in the CV, or
+- the CV contains clear evidence of the underlying skill or responsibility.
+
+Do not include unsupported job-description keywords just because they may improve ATS matching.
+
+If an important job keyword is missing or weakly supported, do not include it in keySkills or atsKeywords.
+Instead, mention it in changeNotes as a missing or weak evidence area.
+
+## Recruiter-screening logic
+
+Write the CV so that a recruiter can quickly understand:
+- why this candidate is relevant
+- which evidence matches the job
+- what level of seniority and ownership the candidate actually has
+- what makes the candidate worth considering
+- where the candidate may still have gaps
+
+Prioritize the evidence a recruiter would look for in the first 10 seconds.
+
+## Writing style
+
+Use clear, specific, business-focused language.
+
+Avoid generic CV filler such as:
+- dynamic professional
+- passionate about
+- proven track record
+- excellent communication skills
+- responsible for
+- results-driven
+- highly motivated
+- fast-paced environment
+
+Prefer bullets that show:
+- action
+- scope
+- method
+- outcome, where evidence exists
+
+Do not invent numbers.
+If no metric exists, write a strong qualitative bullet without fake quantification.
+
+## Structure and length guidance
+
+Profile:
+- 3 to 5 lines maximum.
+- Tailored to the role, but honest about the candidate's actual background.
+
+Key skills:
+- 8 to 12 items.
+- Only include supported skills.
+
+ATS keywords:
+- 10 to 18 items.
+- Only include supported keywords.
+
+Experience sections:
+- Prioritize recent and role-relevant roles.
+- Use 3 to 6 bullets for highly relevant roles.
+- Use fewer bullets for less relevant roles.
+- Do not expand weakly relevant older experience just to fill space.
+
+Portal role descriptions:
+- 1 to 2 concise sentences per role.
+- Useful for LinkedIn, job portals, or application forms.
+
+Change notes:
+- 4 to 8 concise notes.
+- Explain what was emphasized, reframed, reduced, or intentionally not included.
+- Mention important job requirements that could not be reflected because the CV lacks evidence.
+
+## Output requirements
+
+Return only valid JSON matching the provided schema.
+
+Do not include markdown.
+
+Do not include explanations outside the JSON.
+
+Do not add fields that are not in the schema.
+
+The CV should be stronger, clearer, and more relevant, but it must remain grounded in the supplied evidence.
 `;
 
 type OpenAIFitAnalysis = {
@@ -227,12 +453,6 @@ function applyOpenAIFitToMockResult(
         openAiFit.application_strategy.what_to_avoid_overclaiming,
       screeningRisks: openAiFit.application_strategy.screening_risks,
     },
-    roadmap: openAiFit.next_best_actions.map((action, index) => ({
-      n: index + 1,
-      title: `Next action ${index + 1}`,
-      detail: action,
-      action,
-    })),
   };
 }
 
@@ -269,10 +489,50 @@ async function generateOpenAIFitAnalysis(
   const outputText = response.output_text;
 
   if (!outputText) {
-    throw new Error("OpenAI returned no output text.");
+    throw new Error("OpenAI returned no fit analysis output text.");
   }
 
   return JSON.parse(outputText) as OpenAIFitAnalysis;
+}
+
+async function generateOpenAICvDraft(
+  body: AnalyzeRequest,
+  fitAnalysis: OpenAIFitAnalysis
+): Promise<CvDraft> {
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const response = await client.responses.create({
+    model: process.env.OPENAI_MODEL || "gpt-5.5",
+    store: false,
+    input: [
+      {
+        role: "system",
+        content: CV_DRAFT_SYSTEM_PROMPT,
+      },
+      {
+        role: "user",
+        content: buildCvDraftPrompt(body, fitAnalysis),
+      },
+    ],
+    text: {
+      format: {
+        type: "json_schema",
+        name: cvDraftSchema.name,
+        strict: cvDraftSchema.strict,
+        schema: cvDraftSchema.schema,
+      },
+    },
+  });
+
+  const outputText = response.output_text;
+
+  if (!outputText) {
+    throw new Error("OpenAI returned no CV draft output text.");
+  }
+
+  return JSON.parse(outputText) as CvDraft;
 }
 
 export async function POST(request: Request) {
@@ -293,46 +553,52 @@ export async function POST(request: Request) {
 
     const mockResult = createMockAnalysis(jobId, body);
 
-const mockOnlyResult: AnalysisResult = {
-  ...mockResult,
-  sectionSources: {
-    fit: "mock",
-    strategy: "mock",
-    cv: "mock",
-    coverLetter: "mock",
-    outreach: "mock",
-    roadmap: "mock",
-  },
-};
+    const mockOnlyResult: AnalysisResult = {
+      ...mockResult,
+      sectionSources: {
+        fit: "mock",
+        strategy: "mock",
+        cv: "mock",
+        coverLetter: "mock",
+        outreach: "mock",
+        roadmap: "mock",
+      },
+    };
 
-if (!process.env.OPENAI_API_KEY) {
-  console.warn("OPENAI_API_KEY is missing. Returning mock analysis.");
-  return NextResponse.json(mockOnlyResult);
-}
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn("OPENAI_API_KEY is missing. Returning mock analysis.");
+      return NextResponse.json(mockOnlyResult);
+    }
 
-console.log("Calling OpenAI fit analysis...");
-const openAiFit = await generateOpenAIFitAnalysis(body);
-console.log("OpenAI fit analysis received.");
+    console.log("Calling OpenAI fit analysis...");
+    const openAiFit = await generateOpenAIFitAnalysis(body);
+    console.log("OpenAI fit analysis received.");
 
-const result: AnalysisResult = {
-  ...applyOpenAIFitToMockResult(mockResult, openAiFit),
-  sectionSources: {
-    fit: "openai",
-    strategy: "openai",
-    cv: "mock",
-    coverLetter: "mock",
-    outreach: "mock",
-    roadmap: "mock",
-  },
-};
+    console.log("Calling OpenAI CV draft...");
+    const openAiCv = await generateOpenAICvDraft(body, openAiFit);
+    console.log("OpenAI CV draft received.");
 
-return NextResponse.json(result);  } catch (error) {
+    const result: AnalysisResult = {
+      ...applyOpenAIFitToMockResult(mockResult, openAiFit),
+      cv: openAiCv,
+      sectionSources: {
+        fit: "openai",
+        strategy: "openai",
+        cv: "openai",
+        coverLetter: "mock",
+        outreach: "mock",
+        roadmap: "mock",
+      },
+    };
+
+    return NextResponse.json(result);
+  } catch (error) {
     console.error("Analyze route error:", error);
 
     return NextResponse.json(
       {
         error:
-          "The fit analysis could not be generated. Please try again with a shorter CV or job description.",
+          "The analysis could not be generated. Please try again with a shorter CV or job description.",
       },
       { status: 500 }
     );

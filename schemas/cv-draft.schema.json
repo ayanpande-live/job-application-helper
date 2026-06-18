@@ -1,0 +1,78 @@
+{
+  "name": "cv_draft",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "profile": {
+        "type": "string",
+        "description": "A concise role-aligned professional profile paragraph grounded only in the candidate CV."
+      },
+      "keySkills": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Role-relevant skills that are supported by the CV or clearly implied by the CV evidence."
+      },
+      "atsKeywords": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Important job-description keywords that are honestly supported by the CV."
+      },
+      "experienceSections": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "role": {
+              "type": "string"
+            },
+            "bullets": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": ["role", "bullets"]
+        }
+      },
+      "portalRoleDescriptions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "role": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            }
+          },
+          "required": ["role", "description"]
+        }
+      },
+      "changeNotes": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Brief notes explaining what was changed, emphasized, reduced, or intentionally not included."
+      }
+    },
+    "required": [
+      "profile",
+      "keySkills",
+      "atsKeywords",
+      "experienceSections",
+      "portalRoleDescriptions",
+      "changeNotes"
+    ]
+  }
+}
