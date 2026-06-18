@@ -48,7 +48,12 @@ Observed: Passed
 
 Notes: Fit Verdict, Application Strategy, and Tailored CV are now AI-generated. Cover Letter, Outreach, and Roadmap remain prototype mock sections.
 
+## Cover Letter Generation
 
+### First cover letter generation test
+Expected: Cover Letter section marked AI-generated  
+Observed: Passed  
+Notes: Cover letter generation now uses the fit analysis, tailored CV, job description, and JD-visible company context. Outreach and Roadmap remain prototype mock sections.
 
 \## Current conclusion
 
