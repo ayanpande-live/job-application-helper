@@ -138,6 +138,19 @@ export type CredibilityPreference =
   | "Hands-on projects / portfolio proof"
   | "Best mix of free and paid options";
 
+export interface ImprovementAnalysisSnapshot {
+  jobTitle: string;
+  company: string;
+  fit: FitAnalysis;
+  applicationStrategy: ApplicationStrategy;
+  cv: {
+    profile: string;
+    keySkills: string[];
+    atsKeywords: string[];
+    changeNotes: string[];
+  };
+}
+
 export interface ImprovementPlanRequest {
   jobId: string;
   email?: string;
@@ -145,6 +158,7 @@ export interface ImprovementPlanRequest {
   timeCommitment: TimeCommitmentPreference | string;
   budget: BudgetPreference | string;
   credibilityPath: CredibilityPreference | string;
+  analysisSnapshot: ImprovementAnalysisSnapshot;
 }
 
 export interface RecommendedAction {

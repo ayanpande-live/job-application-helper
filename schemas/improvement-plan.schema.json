@@ -1,0 +1,126 @@
+{
+  "name": "improvement_plan",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "success": {
+        "type": "boolean"
+      },
+      "message": {
+        "type": "string"
+      },
+      "plan": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "roleSummary": {
+            "type": "string"
+          },
+          "criticalGaps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "realityCheck": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "recommendedActions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "gap": {
+                  "type": "string"
+                },
+                "whyItMatters": {
+                  "type": "string"
+                },
+                "bestActionType": {
+                  "type": "string"
+                },
+                "estimatedEffort": {
+                  "type": "string"
+                },
+                "expectedImpact": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "gap",
+                "whyItMatters",
+                "bestActionType",
+                "estimatedEffort",
+                "expectedImpact"
+              ]
+            }
+          },
+          "freeOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "paidOptions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "practicalActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "roadmap": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "period": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "actions": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": ["period", "title", "actions"]
+            }
+          },
+          "bestNextActions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "roleSummary",
+          "criticalGaps",
+          "realityCheck",
+          "recommendedActions",
+          "freeOptions",
+          "paidOptions",
+          "practicalActions",
+          "roadmap",
+          "bestNextActions"
+        ]
+      }
+    },
+    "required": ["success", "message", "plan"]
+  }
+}

@@ -13,6 +13,7 @@ import type {
   AnalysisResult,
   AnalysisSource,
   FitVerdict,
+  ImprovementAnalysisSnapshot,
   RequestedAction,
   RoleImprovementPlan,
 } from "@/lib/types";
@@ -114,10 +115,27 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
   }, [jobId]);
 
   const plan = useMemo(
-    () => generatedPlan ?? mockImprovementPlan.plan,
-    [generatedPlan]
-  );
-  const sectionSources = result.sectionSources ?? {
+  () => generatedPlan ?? mockImprovementPlan.plan,
+  [generatedPlan]
+);
+
+const analysisSnapshot: ImprovementAnalysisSnapshot = useMemo(
+  () => ({
+    jobTitle: result.jobTitle,
+    company: result.company,
+    fit: result.fit,
+    applicationStrategy: result.applicationStrategy,
+    cv: {
+      profile: result.cv.profile,
+      keySkills: result.cv.keySkills,
+      atsKeywords: result.cv.atsKeywords,
+      changeNotes: result.cv.changeNotes,
+    },
+  }),
+  [result]
+);
+
+const sectionSources = result.sectionSources ?? {
   fit: "mock",
   strategy: "mock",
   cv: "mock",
@@ -125,6 +143,10 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
   outreach: "mock",
   roadmap: "mock",
 };
+
+const roadmapSource: AnalysisSource = generatedPlan
+  ? "openai"
+  : sectionSources.roadmap;
   return (
     <main className="min-h-screen bg-canvas">
       <header className="mx-auto flex max-w-[1180px] items-center justify-between px-6 py-6 sm:px-8">
@@ -376,12 +398,12 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
                     <div>
                       <SectionTitle eyebrow="Role readiness" title="Improve your fit plan" />
                       <div className="mt-3">
-                        <SourceBadge source={sectionSources.roadmap} />
+                        <SourceBadge source={roadmapSource} />
                       </div>
                       <p className="mt-3 max-w-[700px] text-[14.5px] font-medium leading-[1.6] text-muted">
-                        The real paid add-on will tailor this plan around your time,
-                        budget and preferred way to build credibility. The mock version
-                        below shows the intended structure.
+                        Generate an opt-in plan tailored around your fit gaps, time,
+                        budget and preferred way to build credibility. The preview below
+                        shows the intended structure until you generate your own plan.
                       </p>
                     </div>
                     <Button onClick={() => setImprovementOpen(true)}>
@@ -393,7 +415,7 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
                 <Card className="p-6">
                   <div className="flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-[0.08em] text-muted">
                     <SparkleIcon className="h-4 w-4" />
-                    Mock role readiness plan
+                    {generatedPlan ? "AI role readiness plan" : "Mock role readiness plan"}
                   </div>
                   <h2 className="mt-2 text-[24px] font-black tracking-tighter2">
                     {plan.roleSummary}
@@ -441,6 +463,7 @@ export function ResultsDashboard({ jobId }: ResultsDashboardProps) {
       <ImprovementPlanModal
         open={improvementOpen}
         jobId={jobId}
+        analysisSnapshot={analysisSnapshot}
         onClose={() => setImprovementOpen(false)}
         onPlanGenerated={(newPlan) => {
           setGeneratedPlan(newPlan);

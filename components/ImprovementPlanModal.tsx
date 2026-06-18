@@ -5,7 +5,11 @@ import { Button } from "@/components/ui/Button";
 import { CloseButton, Modal } from "@/components/ui/Modal";
 import { createImprovementPlan } from "@/lib/api";
 import { intakeQuestions } from "@/lib/mock-data";
-import type { ImprovementPlanRequest, RoleImprovementPlan } from "@/lib/types";
+import type {
+  ImprovementAnalysisSnapshot,
+  ImprovementPlanRequest,
+  RoleImprovementPlan,
+} from "@/lib/types";
 
 type IntakeKey = "timeline" | "timeCommitment" | "budget" | "credibilityPath";
 type Intake = Record<IntakeKey, string>;
@@ -20,6 +24,7 @@ const EMPTY: Intake = {
 interface ImprovementPlanModalProps {
   open: boolean;
   jobId: string;
+  analysisSnapshot: ImprovementAnalysisSnapshot;
   onClose: () => void;
   onPlanGenerated?: (plan: RoleImprovementPlan) => void;
 }
@@ -27,6 +32,7 @@ interface ImprovementPlanModalProps {
 export function ImprovementPlanModal({
   open,
   jobId,
+  analysisSnapshot,
   onClose,
   onPlanGenerated,
 }: ImprovementPlanModalProps) {
@@ -47,11 +53,17 @@ export function ImprovementPlanModal({
 
   async function handleSubmit() {
     if (!complete || submitting) return;
+
     setSubmitting(true);
     setError(null);
 
     try {
-      const payload: ImprovementPlanRequest = { jobId, ...intake };
+      const payload: ImprovementPlanRequest = {
+        jobId,
+        ...intake,
+        analysisSnapshot,
+      };
+
       const response = await createImprovementPlan(payload);
       onPlanGenerated?.(response.plan);
       handleClose();
@@ -84,10 +96,13 @@ export function ImprovementPlanModal({
             <div className="flex flex-wrap gap-2">
               {q.options.map((opt) => {
                 const selected = intake[q.key] === opt;
+
                 return (
                   <button
                     key={opt}
-                    onClick={() => setIntake((prev) => ({ ...prev, [q.key]: opt }))}
+                    onClick={() =>
+                      setIntake((prev) => ({ ...prev, [q.key]: opt }))
+                    }
                     className={`cursor-pointer rounded-[10px] px-[15px] py-[9px] text-[13.5px] font-bold transition-colors ${
                       selected
                         ? "border-[1.5px] border-accent bg-accent text-white"
@@ -108,7 +123,11 @@ export function ImprovementPlanModal({
           </div>
         ) : null}
 
-        <Button className="w-full" disabled={!complete || submitting} onClick={handleSubmit}>
+        <Button
+          className="w-full"
+          disabled={!complete || submitting}
+          onClick={handleSubmit}
+        >
           {submitting ? "Generating…" : "Generate my plan"}
         </Button>
       </div>
