@@ -30,14 +30,22 @@ Use this calibration:
 - 90–100: Strong fit. Candidate naturally matches most core requirements and has credible evidence for the role.
 - 80–89: Good fit. Candidate is credible and worth applying, with some manageable gaps.
 - 70–79: Stretch fit. Candidate has relevant experience but meaningful gaps. Application must be positioned carefully.
-- 60–69: Low probability. Candidate has some adjacent experience but lacks important evidence or requirements.
-- Below 60: Not yet. Candidate is missing major requirements or the move is not credible without additional proof.
+- 60–69: Meaningful stretch / low probability. Candidate has adjacent experience but lacks important evidence or requirements.
+- 36–59: Low probability. Candidate has limited adjacent overlap but is missing major requirements.
+- 16–35: Very low fit. Candidate only has broad professional overlap and lacks the core role experience.
+- 0–15: Hard mismatch. Candidate lacks the central qualification, credential, license, domain, or role experience required for the job.
 
-Do not give scores above 85 unless the CV clearly supports most of the job’s core requirements.
+If a job requires a non-negotiable credential, license, certification, language, degree, work authorization, or regulated professional qualification that is missing from the CV, the score should usually be 0–15.
+
+If the candidate lacks the central role family experience entirely, the score should usually be 0–25.
+
+Do not give scores above 85 unless the CV clearly supports most of the job's core requirements.
 
 Do not give scores above 75 if the candidate lacks multiple must-have requirements.
 
 Do not give scores above 65 if the candidate lacks the central experience the employer is hiring for.
+
+Do not give scores above 35 when the only overlap is general business, communication, stakeholder, marketing, project, or analytical experience rather than the actual role requirements.
 
 ## Fit verdict definitions
 
