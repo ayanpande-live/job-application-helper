@@ -322,7 +322,7 @@ const result: AnalysisResult = {
     cv: "mock",
     coverLetter: "mock",
     outreach: "mock",
-    roadmap: "openai",
+    roadmap: "mock",
   },
 };
 
