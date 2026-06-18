@@ -1,0 +1,170 @@
+{
+  "name": "fit_analysis",
+  "strict": true,
+  "schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "fit_verdict": {
+        "type": "string",
+        "enum": [
+          "strong_fit",
+          "good_fit",
+          "stretch_fit",
+          "low_probability",
+          "not_yet"
+        ],
+        "description": "Overall fit verdict based on actual evidence from the CV compared with the job description."
+      },
+      "fit_score": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100,
+        "description": "Actual candidacy fit score. This should not be inflated based on possible CV rewriting."
+      },
+      "score_rationale": {
+        "type": "string",
+        "description": "Brief explanation of why this score was assigned."
+      },
+      "target_role_type": {
+        "type": "string",
+        "description": "Short description of the role type, for example B2B marketing leadership, SaaS account management, marketplace operations, or product marketing."
+      },
+      "employer_priorities": {
+        "type": "array",
+        "description": "The most important priorities the employer appears to have based on the job description.",
+        "items": {
+          "type": "string"
+        }
+      },
+      "strongest_matches": {
+        "type": "array",
+        "description": "Candidate strengths that are clearly supported by the CV and relevant to the job.",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "match": {
+              "type": "string"
+            },
+            "evidence": {
+              "type": "string"
+            },
+            "why_it_matters": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "match",
+            "evidence",
+            "why_it_matters"
+          ]
+        }
+      },
+      "main_gaps": {
+        "type": "array",
+        "description": "Most important gaps or risks in the candidate's fit.",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "gap": {
+              "type": "string"
+            },
+            "gap_type": {
+              "type": "string",
+              "enum": [
+                "skill_gap",
+                "evidence_gap",
+                "seniority_gap",
+                "domain_gap",
+                "keyword_gap",
+                "geography_language_gap",
+                "none"
+              ]
+            },
+            "severity": {
+              "type": "string",
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "why_it_matters": {
+              "type": "string"
+            },
+            "can_be_addressed_by_positioning": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "gap",
+            "gap_type",
+            "severity",
+            "why_it_matters",
+            "can_be_addressed_by_positioning"
+          ]
+        }
+      },
+      "application_strategy": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Practical strategy for whether and how the candidate should apply.",
+        "properties": {
+          "should_apply": {
+            "type": "string",
+            "description": "Clear recommendation on whether the candidate should apply now."
+          },
+          "positioning_advice": {
+            "type": "string",
+            "description": "The main narrative or positioning angle the candidate should use."
+          },
+          "what_to_emphasize": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "what_to_avoid_overclaiming": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "screening_risks": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "should_apply",
+          "positioning_advice",
+          "what_to_emphasize",
+          "what_to_avoid_overclaiming",
+          "screening_risks"
+        ]
+      },
+      "next_best_actions": {
+        "type": "array",
+        "description": "The most useful next actions before generating full application assets.",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "required": [
+      "fit_verdict",
+      "fit_score",
+      "score_rationale",
+      "target_role_type",
+      "employer_priorities",
+      "strongest_matches",
+      "main_gaps",
+      "application_strategy",
+      "next_best_actions"
+    ]
+  }
+}
