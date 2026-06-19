@@ -15,6 +15,7 @@ import coverLetterSchema from "@/schemas/cover-letter.schema.json";
 import outreachSchema from "@/schemas/outreach.schema.json";
 
 type ValidAnalyzeRequest = AnalyzeRequest & {
+  candidateName: string;
   jobTitle: string;
   company: string;
   cv: string;
@@ -25,6 +26,8 @@ function isValidPayload(
   data: Partial<AnalyzeRequest>
 ): data is ValidAnalyzeRequest {
   return (
+    typeof data.candidateName === "string" &&
+    data.candidateName.trim().length > 1 &&
     typeof data.jobTitle === "string" &&
     data.jobTitle.trim().length > 2 &&
     typeof data.company === "string" &&
@@ -39,6 +42,7 @@ function isValidPayload(
 function normalizePayload(body: ValidAnalyzeRequest): ValidAnalyzeRequest {
   return {
     ...body,
+    candidateName: body.candidateName.trim(),
     jobTitle: body.jobTitle.trim(),
     company: body.company.trim(),
     cv: body.cv.trim(),
@@ -87,6 +91,9 @@ ${body.strengths || "Not provided."}
 ${body.improvements || "Not provided."}
 
 ## Role metadata
+
+Candidate name:
+${body.candidateName || "Not provided."}
 
 Job title:
 ${body.jobTitle}
@@ -140,6 +147,9 @@ ${body.strengths || "Not provided."}
 ${body.improvements || "Not provided."}
 
 ## Role metadata
+
+Candidate name:
+${body.candidateName || "Not provided."}
 
 Job title:
 ${body.jobTitle}
@@ -226,6 +236,9 @@ ${body.strengths || "Not provided."}
 ${body.improvements || "Not provided."}
 
 ## Role metadata
+
+Candidate name:
+${body.candidateName || "Not provided."}
 
 Job title:
 ${body.jobTitle}
@@ -420,6 +433,9 @@ ${body.strengths || "Not provided."}
 ${body.improvements || "Not provided."}
 
 ## Role metadata
+
+Candidate name:
+${body.candidateName || "Not provided."}
 
 Job title:
 ${body.jobTitle}
@@ -1262,7 +1278,7 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           error:
-            "Please provide the target job title, company / brand name, enough CV text, and enough job description text.",
+            "Please provide the candidate name, target job title, company / brand name, enough CV text, and enough job description text.",
         },
         { status: 400 }
       );
@@ -1277,6 +1293,7 @@ export async function POST(request: Request) {
 
     const mockResult: AnalysisResult = {
       ...createMockAnalysis(jobId, normalizedBody),
+      candidateName: normalizedBody.candidateName,
       jobTitle: normalizedBody.jobTitle,
       company: normalizedBody.company,
     };
@@ -1325,6 +1342,7 @@ export async function POST(request: Request) {
 
     const result: AnalysisResult = {
       ...applyOpenAIFitToMockResult(mockResult, openAiFit),
+      candidateName: normalizedBody.candidateName,
       jobTitle: normalizedBody.jobTitle,
       company: normalizedBody.company,
       cv: openAiCv,

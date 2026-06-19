@@ -55,6 +55,7 @@ export function InputForm({
   error,
 }: InputFormProps) {
   const canSubmit =
+  (values.candidateName ?? "").trim().length > 1 &&
   (values.jobTitle ?? "").trim().length > 2 &&
   (values.company ?? "").trim().length > 1 &&
   values.cv.trim().length > 40 &&
@@ -87,7 +88,16 @@ export function InputForm({
 
         <div className="mt-9 grid grid-cols-1 items-start gap-10 lg:grid-cols-[1fr_300px]">
           <div className="flex flex-col gap-[22px]">
-            <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-[18px] sm:grid-cols-3">
+              <Field label="Candidate name" required>
+                <input
+                  value={values.candidateName ?? ""}
+                  onChange={(e) => onChange({ candidateName: e.target.value })}
+                  placeholder="e.g. Your full name"
+                  className={inputClass}
+                />
+              </Field>
+              
               <Field label="Target job title" required>
                 <input
                   value={values.jobTitle ?? ""}
@@ -175,7 +185,7 @@ export function InputForm({
                 Analyze my fit →
               </Button>
               <span className="text-[13px] font-medium text-muted">
-                Job title, company / brand name, CV, and job description are required for accurate results.
+                Candidate name, job title, company / brand name, CV, and job description are required for accurate results.
               </span>
             </div>
           </div>

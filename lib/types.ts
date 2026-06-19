@@ -21,6 +21,7 @@ export interface AnalyzeRequest {
   jobDescription: string;
   strengths?: string;
   improvements?: string;
+  candidateName?: string;
   jobTitle?: string;
   company?: string;
 }
@@ -88,6 +89,7 @@ export interface RoadmapItem {
 
 export interface AnalysisResult {
   jobId: string;
+  candidateName?: string;
   jobTitle: string;
   company: string;
   fit: FitAnalysis;

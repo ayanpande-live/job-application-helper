@@ -8,6 +8,10 @@ import { Wordmark } from "@/components/ui/Logo";
 import { CheckCircle, SparkleIcon } from "@/components/ui/icons";
 import { EmailCaptureModal } from "@/components/EmailCaptureModal";
 import { ImprovementPlanModal } from "@/components/ImprovementPlanModal";
+import {
+          downloadCoverLetterDocx,
+          downloadCvDocx,
+        } from "@/lib/document-export";
 import { createMockAnalysis, mockImprovementPlan } from "@/lib/mock-data";
 import type {
   AnalysisResult,
@@ -331,18 +335,41 @@ const roadmapSource: AnalysisSource = generatedPlan
                     <BulletList items={result.cv.changeNotes} />
                   </div>
                 </div>
-                <Button className="mt-6" variant="secondary" onClick={() => setEmailAction("download_cv")}>
-                  Email me the CV draft
-                </Button>
+                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                  <Button variant="secondary" onClick={() => downloadCvDocx(result)}>
+                    Download CV (.docx)
+                  </Button>
+                  <Button variant="secondary" onClick={() => setEmailAction("download_cv")}>
+                    Email me the CV draft
+                  </Button>
+                </div>
               </Card>
             ) : null}
 
             {activeTab === "cover" ? (
               <Card className="p-6">
-                <SectionTitle eyebrow="Cover letter" title="Drafted from the fit strategy" />
-                <div className="mt-3">
-                  <SourceBadge source={sectionSources.coverLetter} />
-                </div>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <SectionTitle eyebrow="Cover letter" title="Drafted from the fit strategy" />
+              <div className="mt-3">
+                <SourceBadge source={sectionSources.coverLetter} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                variant="secondary"
+                onClick={() => downloadCoverLetterDocx(result, "full")}
+              >
+                Download full (.docx)
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => downloadCoverLetterDocx(result, "short")}
+              >
+                Download short (.docx)
+              </Button>
+              </div>
+            </div>
                 <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1.15fr_.85fr]">
                   <div>
                     <div className="mb-2 text-[15px] font-black">Full version</div>
